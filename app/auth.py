@@ -1,32 +1,29 @@
 from fastapi_users import FastAPIUsers
-from fastapi_users.authentication import JWTAuthentication, OAuth2Authentication
-from fastapi_users.db import SQLAlchemyUserDatabase
-from fastapi_users import models as user_models
+from fastapi_users.authentication import AuthenticationBackend, BearerTransport, JWTStrategy
+from fastapi_users_db_sqlalchemy import SQLAlchemyUserDatabase
 from app.models import User
-from app.database import database
+from app.database import async_session
 import os
+from dotenv import load_dotenv
 
-user_db = SQLAlchemyUserDatabase(User, database, User.__table__)
+load_dotenv()
+
+user_db = SQLAlchemyUserDatabase(User, async_session)
+
+bearer_transport = BearerTransport(tokenUrl="/auth/jwt/login")
 
 
-jwt_authentication = JWTAuthentication(
-    secret=os.getenv("SECRET_KEY"), lifetime_seconds=3600)
+def get_jwt_strategy() -> JWTStrategy:
+    return JWTStrategy(secret=os.getenv("SECRET_KEY"), lifetime_seconds=3600)
 
 
-yandex_oauth = OAuth2Authentication(
-    name="yandex",
-    authorize_url="https://oauth.yandex.com/authorize",
-    token_url="https://oauth.yandex.com/token",
-    user_url="https://login.yandex.com/info",
-    client_id=os.getenv("YANDEX_CLIENT_ID"),
-    client_secret=os.getenv("YANDEX_CLIENT_SECRET"),
+jwt_backend = AuthenticationBackend(
+    name="jwt",
+    transport=bearer_transport,
+    get_strategy=get_jwt_strategy,
 )
 
-fastapi_users = FastAPIUsers(
-    user_db,
-    [jwt_authentication, yandex_oauth],
-    User,
-    user_models.UserCreate,
-    user_models.UserUpdate,
-    user_models.UserDB,
+fastapi_users = FastAPIUsers[User, int](
+    lambda: user_db,
+    [jwt_backend],
 )

@@ -1,9 +1,16 @@
 import os
-from database import Database
-from sqlalchemy import create_engine, MetaData
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy import MetaData
+from dotenv import load_dotenv
+
+load_dotenv()
 
 DATABASE_URL = os.getenv(
-    "DATABASE_URL", "postgresql://user:password@db/dbname")
-database = Database(DATABASE_URL)
+    "DATABASE_URL", "postgresql+asyncpg://user:password@db/dbname")
+engine = create_async_engine(DATABASE_URL, echo=True)
 metadata = MetaData()
-engine = create_engine(DATABASE_URL)
+
+async_session = sessionmaker(
+    engine, class_=AsyncSession, expire_on_commit=False
+)
