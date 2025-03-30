@@ -26,3 +26,10 @@ async def upload_audio(file: UploadFile = File(...), file_name: str = Form(...),
     }
     await database.execute(AudioFile.__table__.insert(), values=audio_file)
     return {"message": "File uploaded successfully"}
+
+
+@router.get("/audio-files", tags=["audio"])
+async def get_audio_files(user: User = Depends(current_user)):
+    query = AudioFile.__table__.select().where(AudioFile.user_id == user.id)
+    audio_files = await database.fetch_all(query)
+    return audio_files
